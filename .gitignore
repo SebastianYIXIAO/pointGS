@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Data and output directories
+data/
+output/
+*.pth
+*.bin
+*.ply
+
+# External repos (users clone separately)
+SegAnyGAussians/
+
+# ICP working directories
+icp_work/
+logs/
+*.asc
+
+# COLMAP outputs
+*.db
+sparse/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
