@@ -1,18 +1,18 @@
 """
 Step 1: Data Preparation Pipeline
-Converts S3DIS .pth -> .txt -> Z-split -> render multi-view images -> COLMAP SfM
+Converts S3DIS .pth -> .txt -> segment & split -> render multi-view images -> COLMAP SfM
 
 Usage:
     python step1_data_preparation.py --config configs/default.yaml
     python step1_data_preparation.py --config configs/default.yaml --step pth2txt
-    python step1_data_preparation.py --config configs/default.yaml --step split --input_dir data/txt --output_dir data/cut
+    python step1_data_preparation.py --config configs/default.yaml --step split
 """
 
 import argparse
 import yaml
 
 from utils.data_conversion import convert_pth_to_txt, render_views, run_colmap_sfm
-from utils.point_cloud_ops import split_by_z_median
+from utils.point_cloud_ops import segment_and_split
 
 
 def load_config(config_path):
@@ -42,11 +42,15 @@ def main():
 
     if args.step in ("all", "split"):
         print("=" * 60)
-        print("Sub-step 2: Split point clouds by Z-median")
+        print("Sub-step 2: Segment & split point clouds")
         print("=" * 60)
         inp = paths["s3dis_txt_dir"] if args.step == "all" else (args.input_dir or paths["s3dis_txt_dir"])
         out = args.output_dir or paths["cut_output_dir"]
-        split_by_z_median(inp, out)
+        seg = cfg["data_prep"]
+        segment_and_split(inp, out,
+                          max_length=seg["max_axis_length"],
+                          min_seg=seg["min_segment_length"],
+                          max_seg=seg["max_segment_length"])
 
     if args.step in ("all", "render"):
         print("=" * 60)

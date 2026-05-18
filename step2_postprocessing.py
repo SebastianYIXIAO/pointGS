@@ -1,7 +1,7 @@
 """
 Step 2: Post-processing Pipeline (after SAGA produces labeled Gaussians)
 Voxel denoise -> Remove label-0 -> KDTree denoise -> FPS scale ->
-ICP registration -> Label consistency filter -> 1NN label transfer -> Greedy label mapping
+ICP registration -> Label consistency filter -> 1NN label transfer
 
 Usage:
     python step2_postprocessing.py --config configs/default.yaml --saga_output_dir output/saga --reference_dir data/ref
@@ -21,7 +21,7 @@ from utils.denoising import (
 )
 from utils.point_cloud_ops import normalize_scale
 from utils.registration import run_icp_registration
-from utils.label_transfer import transfer_labels_1nn, greedy_iou_label_mapping
+from utils.label_transfer import transfer_labels_1nn
 
 
 def load_config(config_path):
@@ -33,7 +33,7 @@ def main():
     parser = argparse.ArgumentParser(description="PointGS Step 2: Post-processing")
     parser.add_argument("--config", default="configs/default.yaml", help="Path to config YAML file")
     parser.add_argument("--step", default="all",
-                        choices=["all", "denoise", "scale", "icp", "filter", "transfer", "match"],
+                        choices=["all", "denoise", "scale", "icp", "filter", "transfer"],
                         help="Which sub-step to run")
     parser.add_argument("--saga_output_dir", default=None, help="SAGA output directory (labeled Gaussians)")
     parser.add_argument("--reference_dir", default=None, help="Reference/GT point clouds directory")
@@ -55,7 +55,6 @@ def main():
     icp_dir = os.path.join(out_root, "icp_registered")
     filtered_dir = os.path.join(out_root, "label_filtered")
     transferred_dir = os.path.join(out_root, "label_transferred")
-    mapped_dir = os.path.join(out_root, "label_mapped")
 
     if args.step in ("all", "denoise"):
         print("=" * 60)
@@ -102,15 +101,6 @@ def main():
         print("Sub-step 7: 1NN label transfer")
         print("=" * 60)
         transfer_labels_1nn(filtered_dir, ref_dir, transferred_dir)
-
-    if args.step in ("all", "match"):
-        print("=" * 60)
-        print("Sub-step 8: Greedy IoU label mapping")
-        print("=" * 60)
-        eval_cfg = cfg["evaluation"]
-        greedy_iou_label_mapping(transferred_dir, ref_dir, mapped_dir,
-                                 pred_label_col=eval_cfg["pred_label_col"],
-                                 gt_label_col=eval_cfg["gt_label_col"])
 
     print(f"\nStep 2 complete. Results in: {out_root}")
 

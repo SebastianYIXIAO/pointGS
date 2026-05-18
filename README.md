@@ -1,5 +1,7 @@
 # PointGS
 
+[Paper](https://arxiv.org/pdf/2605.11520)Paper
+
 **3D Point Cloud Semantic Segmentation via Gaussian Splatting**
 
 PointGS is a pipeline for indoor point cloud semantic segmentation that leverages 3D Gaussian Splatting (3DGS) and the Segment Anything Model (SAM). It projects point clouds to multi-view images, reconstructs 3D Gaussians, segments them using [SegAnyGAussians (SAGA)](https://github.com/Jumpat/SegAnyGAussians), and transfers semantic labels back to the original point cloud.
@@ -11,16 +13,15 @@ S3DIS Point Cloud (.pth)
     |
     v
 [Step 1] Data Preparation
-    |  pth -> txt -> Z-split -> render views -> COLMAP SfM
+    |  pth -> txt -> segment & split -> render views -> COLMAP SfM
     v
 [SAGA] Gaussian Reconstruction & Segmentation (external)
     |  3DGS training -> SAM masks -> contrastive features -> segmentation
     v
 [Step 2] Post-processing
-    |  denoise -> scale -> ICP registration -> label transfer -> label mapping
+    |  denoise -> scale -> ICP registration -> label transfer
     v
-[Step 3] Evaluation
-       mIoU, AP, mAcc, oAcc
+Pseudo-labeled Point Cloud
 ```
 
 ## Requirements
@@ -60,7 +61,7 @@ paths:
 
 ### 2. Step 1: Data Preparation
 
-Convert S3DIS data, split point clouds, render multi-view images, and run COLMAP:
+Convert S3DIS data, segment & split point clouds, render multi-view images, and run COLMAP:
 
 ```bash
 # Run the full data preparation pipeline
@@ -75,7 +76,9 @@ python step1_data_preparation.py --config configs/default.yaml --step colmap
 
 **Sub-steps:**
 1. **pth2txt** - Convert S3DIS `.pth` files to `.txt` format (x y z r g b label)
-2. **split** - Split each point cloud into upper/lower halves by Z-axis median
+2. **split** - Segment large scenes and split each piece in half:
+   - If all axes <= 7m: split at the shortest-axis median into 2 parts
+   - If any axis > 7m: segment along the longest axis into N pieces (each ~4-7m), then split each piece at the shortest-axis median
 3. **render** - Render 80 perspective views per scene using matplotlib
 4. **colmap** - Run COLMAP feature extraction, matching, and sparse reconstruction
 
@@ -113,7 +116,6 @@ python step2_postprocessing.py --config configs/default.yaml --step scale
 python step2_postprocessing.py --config configs/default.yaml --step icp
 python step2_postprocessing.py --config configs/default.yaml --step filter
 python step2_postprocessing.py --config configs/default.yaml --step transfer
-python step2_postprocessing.py --config configs/default.yaml --step match
 ```
 
 **Sub-steps:**
@@ -122,19 +124,6 @@ python step2_postprocessing.py --config configs/default.yaml --step match
 3. **icp** - ICP registration using CloudCompare (initial + 24 rotations + best selection)
 4. **filter** - Label consistency filtering with KNN and connected component analysis
 5. **transfer** - 1-nearest-neighbor label transfer from Gaussians to original points
-6. **match** - Greedy IoU-based label mapping to align predicted labels with ground truth
-
-### 5. Step 3: Evaluation
-
-Compute semantic segmentation metrics:
-
-```bash
-python step3_evaluation.py --config configs/default.yaml \
-    --pred_dir output/results/label_mapped \
-    --gt_dir data/reference
-```
-
-**Metrics:** mIoU, AP (Average Precision), mAcc (mean Accuracy), oAcc (overall Accuracy) for 13 S3DIS classes.
 
 ### Optional: Visualization
 
@@ -149,18 +138,16 @@ python tools/visualize.py --input_dir output/results/label_mapped --output_dir o
 ```
 PointGS/
 ├── configs/default.yaml          # Configuration (paths, parameters)
-├── step1_data_preparation.py     # Data conversion & COLMAP
+├── step1_data_preparation.py     # Data conversion, segmentation & COLMAP
 ├── step2_postprocessing.py       # Denoising, registration, label transfer
-├── step3_evaluation.py           # mIoU evaluation
 ├── saga_batch.py                 # SAGA batch processing helper
 ├── utils/
 │   ├── io_utils.py               # Point cloud I/O
 │   ├── data_conversion.py        # PTH conversion, rendering, COLMAP
-│   ├── point_cloud_ops.py        # Z-split, FPS, scaling
+│   ├── point_cloud_ops.py        # Scene segmentation, FPS, scaling
 │   ├── denoising.py              # Voxel/KDTree denoising, label filtering
 │   ├── registration.py           # ICP registration (CloudCompare)
-│   ├── label_transfer.py         # 1NN transfer & label mapping
-│   ├── metrics.py                # mIoU, AP, mAcc, oAcc
+│   ├── label_transfer.py         # 1NN label transfer
 │   └── visualization.py          # Label-to-PLY conversion
 └── tools/visualize.py            # Visualization CLI
 ```
@@ -171,6 +158,9 @@ All parameters are configurable via `configs/default.yaml`:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
+| `max_axis_length` | 7.0 | Axis length threshold for scene segmentation |
+| `min_segment_length` | 4.0 | Minimum segment length when splitting |
+| `max_segment_length` | 7.0 | Maximum segment length when splitting |
 | `voxel_size` | 0.15 | Voxel size for grid denoising |
 | `voxel_cube_size` | 5 | Cube size for densest region search |
 | `kdtree_radius` | 0.007 | Radius for KDTree denoising |
@@ -181,18 +171,20 @@ All parameters are configurable via `configs/default.yaml`:
 | `k_connected` | 50 | K for connectivity analysis |
 | `min_consistency_ratio` | 0.8 | Minimum label agreement ratio |
 | `min_connected_threshold` | 30 | Minimum connected component size |
-| `num_classes` | 13 | Number of semantic classes (S3DIS) |
 
 ## Acknowledgements
 
 This project builds upon [SegAnyGAussians (SAGA)](https://github.com/Jumpat/SegAnyGAussians) by Hu et al. for 3D Gaussian segmentation. Please cite their work if you use this pipeline:
 
 ```bibtex
-@article{cen2023saga,
-  title={Segment Any 3D Gaussians},
+@inproceedings{cen2025segment,
+  title={Segment any 3d gaussians},
   author={Cen, Jiazhong and Fang, Jiemin and Yang, Chen and Xie, Lingxi and Zhang, Xiaopeng and Shen, Wei and Tian, Qi},
-  journal={arXiv preprint arXiv:2312.00860},
-  year={2023}
+  booktitle={Proceedings of the AAAI conference on artificial intelligence},
+  volume={39},
+  number={2},
+  pages={1971--1979},
+  year={2025}
 }
 ```
 
