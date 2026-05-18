@@ -174,7 +174,7 @@ All parameters are configurable via `configs/default.yaml`:
 
 ## Acknowledgements
 
-This project builds upon [SegAnyGAussians (SAGA)](https://github.com/Jumpat/SegAnyGAussians) by Hu et al. for 3D Gaussian segmentation. Please cite their work if you use this pipeline:
+This project builds upon [SegAnyGAussians (SAGA)](https://github.com/Jumpat/SegAnyGAussians) by Cen et al. for 3D Gaussian segmentation. Please cite their work if you use this pipeline:
 
 ```bibtex
 @inproceedings{cen2025segment,
