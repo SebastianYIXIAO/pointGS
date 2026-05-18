@@ -1,6 +1,6 @@
 # PointGS
 
-[Paper](https://arxiv.org/pdf/2605.11520)Paper
+[Paper on arXiv](https://arxiv.org/pdf/2605.11520)
 
 **3D Point Cloud Semantic Segmentation via Gaussian Splatting**
 
