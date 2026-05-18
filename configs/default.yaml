@@ -1,0 +1,46 @@
+# PointGS Configuration
+# All paths can be absolute or relative to the project root.
+
+# === External Tools ===
+colmap_exe: "colmap"
+cloudcompare_exe: "CloudCompare"
+
+# === Paths ===
+paths:
+  # Step 1: Data Preparation
+  s3dis_pth_dir: "data/s3dis/Area_5"
+  s3dis_txt_dir: "data/s3dis/Area_5_txt"
+  cut_output_dir: "data/s3dis/Area_5_cut"
+
+  # Step 2: Post-processing (after SAGA)
+  saga_output_dir: "output/saga_gaussians"
+  reference_dir: "data/reference"
+  final_output_dir: "output/results"
+
+# === Step 1: Data Preparation ===
+data_prep:
+  num_render_views: 80
+  # Scene segmentation: if any axis exceeds max_axis_length, segment along longest axis
+  max_axis_length: 7.0
+  min_segment_length: 4.0
+  max_segment_length: 7.0
+
+# === Step 2: Post-processing ===
+postprocessing:
+  # Voxel grid denoising
+  voxel_size: 0.15
+  voxel_cube_size: 5
+
+  # KDTree radius denoising
+  kdtree_radius: 0.007
+  kdtree_min_neighbors: 35
+  kdtree_iterations: 2
+
+  # FPS scale normalization
+  fps_sample_size: 1024
+
+  # Label consistency filtering
+  k_consistency: 20
+  k_connected: 50
+  min_consistency_ratio: 0.8
+  min_connected_threshold: 30
